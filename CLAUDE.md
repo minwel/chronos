@@ -181,8 +181,11 @@ npm run dev  # http://localhost:5173
 
 ---
 
-## Linear 项目
+## 项目链接
 
-项目地址：https://linear.app/ssiresearch/project/chronos-语音日历工具-b09903d64c46
+| 平台 | 地址 |
+|------|------|
+| GitHub | https://github.com/minwel/chronos |
+| Linear | https://linear.app/ssiresearch/project/chronos-语音日历工具-b09903d64c46 |
 
-团队：Jying
+Linear 团队：Jying
