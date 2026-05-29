@@ -5,9 +5,13 @@ services:
       - "8000:8000"
     env_file:
       - ./backend/.env
+    environment:
+      # Windows 挂载下 watchfiles 收不到文件事件，强制轮询才能触发 --reload
+      - WATCHFILES_FORCE_POLLING=true
     volumes:
       # 挂载源码 + 持久化 SQLite 数据库（chronos.db 落在 ./backend 下）
       - ./backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     healthcheck:
       # python:3.11-slim 自带 python，无需额外安装 curl
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
@@ -18,10 +22,20 @@ services:
     restart: unless-stopped
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      # 开发用 Dockerfile：Vite dev server + HMR 热加载
+      # 生产 nginx 构建见 ./frontend/Dockerfile
+      dockerfile: Dockerfile.dev
     ports:
-      # nginx 容器内监听 80，映射到宿主 5173
-      - "5173:80"
+      # Vite dev server 容器内监听 5173
+      - "5173:5173"
+    environment:
+      # 容器内 localhost 指向自身，代理须指向 backend 服务名
+      - VITE_PROXY_TARGET=http://backend:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules        # 匿名卷，避免主机目录覆盖容器内已装依赖
     depends_on:
       backend:
         condition: service_healthy
