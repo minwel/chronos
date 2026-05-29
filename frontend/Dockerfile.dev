@@ -1,0 +1,16 @@
+# 开发用镜像：跑 Vite dev server，配合 volume 挂载实现热加载（HMR）。
+# 生产构建请使用同目录的 Dockerfile（nginx 多阶段构建）。
+FROM node:20-slim
+
+WORKDIR /app
+
+# 先拷贝依赖清单，利用 Docker 层缓存
+COPY package.json package-lock.json ./
+RUN npm install
+
+COPY . .
+
+EXPOSE 5173
+
+# --host 0.0.0.0 让容器外可访问；代码变更经轮询监听触发 HMR
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
