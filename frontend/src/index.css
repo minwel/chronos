@@ -1,0 +1,187 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --radius: 0.75rem;
+    --background: 4 4 10;
+    --foreground: 248 248 252;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background-color: #04040a;
+    color: #f8f8fc;
+    font-family: 'DM Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  #root {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+@layer utilities {
+  .text-glow-amber {
+    text-shadow: 0 0 20px rgba(245, 158, 11, 0.5);
+  }
+
+  .border-glow-amber {
+    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.3), 0 0 20px rgba(245, 158, 11, 0.1);
+  }
+
+  .glass {
+    background: rgba(12, 12, 20, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .glass-hover {
+    transition: background 0.2s, border-color 0.2s;
+  }
+
+  .glass-hover:hover {
+    background: rgba(20, 20, 33, 0.8);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* FullCalendar dark theme overrides */
+.fc {
+  --fc-border-color: rgba(255, 255, 255, 0.06);
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: rgba(20, 20, 33, 0.4);
+  --fc-neutral-text-color: #8888a8;
+  --fc-today-bg-color: rgba(245, 158, 11, 0.05);
+  --fc-event-bg-color: rgba(6, 182, 212, 0.2);
+  --fc-event-border-color: rgba(6, 182, 212, 0.5);
+  --fc-event-text-color: #22d3ee;
+  --fc-button-bg-color: rgba(20, 20, 33, 0.8);
+  --fc-button-border-color: rgba(255, 255, 255, 0.08);
+  --fc-button-hover-bg-color: rgba(36, 36, 58, 0.9);
+  --fc-button-hover-border-color: rgba(245, 158, 11, 0.3);
+  --fc-button-active-bg-color: rgba(245, 158, 11, 0.15);
+  --fc-button-active-border-color: rgba(245, 158, 11, 0.5);
+  font-family: 'DM Sans', system-ui, sans-serif;
+}
+
+.fc .fc-toolbar-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.25rem;
+  color: #f8f8fc;
+  letter-spacing: -0.02em;
+}
+
+.fc .fc-button {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.8rem;
+  border-radius: 6px;
+  color: #8888a8;
+  transition: all 0.15s ease;
+}
+
+.fc .fc-button:hover {
+  color: #f8f8fc;
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled):active {
+  color: #f59e0b;
+}
+
+.fc .fc-col-header-cell-cushion {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #444458;
+  padding: 10px 4px;
+}
+
+.fc .fc-daygrid-day-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  color: #8888a8;
+  padding: 6px 8px;
+  transition: color 0.15s;
+}
+
+.fc .fc-daygrid-day:hover .fc-daygrid-day-number {
+  color: #f8f8fc;
+}
+
+.fc .fc-day-today .fc-daygrid-day-number {
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+.fc .fc-day-today {
+  background: var(--fc-today-bg-color) !important;
+}
+
+.fc .fc-event {
+  border-radius: 4px;
+  padding: 1px 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-left: 2px solid rgba(6, 182, 212, 0.7) !important;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.fc .fc-event:hover {
+  filter: brightness(1.2);
+  transform: translateY(-1px);
+}
+
+.fc .fc-timegrid-slot-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: #444458;
+}
+
+.fc .fc-scrollgrid {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.fc .fc-view-harness {
+  border-radius: 8px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
