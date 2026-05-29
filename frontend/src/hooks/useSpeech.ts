@@ -28,7 +28,7 @@ declare global {
 }
 
 interface UseSpeechOptions {
-  onResult: (text: string) => void
+  onResult: (text: string) => void | Promise<void>
   onError?: (error: string) => void
   lang?: string
 }
@@ -57,7 +57,9 @@ export function useSpeech({ onResult, onError, lang = 'zh-CN' }: UseSpeechOption
     recognition.onresult = (event) => {
       const text = event.results[0][0].transcript
       setState('processing')
-      onResult(text)
+      Promise.resolve(onResult(text)).finally(() => {
+        setState('idle')
+      })
     }
 
     recognition.onerror = (event) => {
@@ -88,9 +90,5 @@ export function useSpeech({ onResult, onError, lang = 'zh-CN' }: UseSpeechOption
     window.speechSynthesis.speak(utterance)
   }, [])
 
-  const finishProcessing = useCallback(() => {
-    setState('idle')
-  }, [])
-
-  return { state, start, stop, speak, finishProcessing }
+  return { state, start, stop, speak }
 }
