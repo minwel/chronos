@@ -87,14 +87,18 @@ export function useSpeech({ onResult, onError, lang = 'zh-CN' }: UseSpeechOption
       return
     }
     window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance(text)
-    utterance.lang = speakLang
-    utterance.rate = 0.95
-    utterance.pitch = 1
-    if (onEnd) {
-      utterance.onend = () => onEnd()
-    }
-    window.speechSynthesis.speak(utterance)
+    // Chrome bug workaround: cancel() 后立刻 speak() 可能被吞掉，
+    // 尤其是在语音识别刚结束时。加短延迟确保合成引擎就绪。
+    setTimeout(() => {
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.lang = speakLang
+      utterance.rate = 0.95
+      utterance.pitch = 1
+      if (onEnd) {
+        utterance.onend = () => onEnd()
+      }
+      window.speechSynthesis.speak(utterance)
+    }, 150)
   }, [])
 
   const setAwaitingConfirm = useCallback(() => {
