@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Mic, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { SpeechState } from '@/hooks/useSpeech'
@@ -43,14 +44,34 @@ const stateConfig = {
   },
 }
 
+const idleExamples = [
+  '「明天下午三点开会」',
+  '「查看本周日程」',
+  '「删除周五的会议」',
+  '「下周一上午十点健身」',
+]
+
 export function VoiceButton({ state, onStart, onStop, lastText, className }: VoiceButtonProps) {
   const config = stateConfig[state]
   const Icon = config.icon
+  const [idleExampleIndex, setIdleExampleIndex] = useState(0)
+
+  useEffect(() => {
+    if (state !== 'idle') return
+
+    const timer = window.setInterval(() => {
+      setIdleExampleIndex((index) => (index + 1) % idleExamples.length)
+    }, 3000)
+
+    return () => window.clearInterval(timer)
+  }, [state])
 
   const handleClick = () => {
     if (state === 'idle') onStart()
     else if (state === 'listening') onStop()
   }
+
+  const sublabel = lastText ? `"${lastText}"` : config.sublabel
 
   return (
     <div className={cn('flex flex-col items-center gap-4', className)}>
@@ -100,9 +121,24 @@ export function VoiceButton({ state, onStart, onStop, lastText, className }: Voi
         )}>
           {config.label}
         </p>
-        <p className="text-xs text-stone-600 font-sans">
-          {lastText && state !== 'idle' ? `"${lastText}"` : config.sublabel}
-        </p>
+        {state === 'idle' ? (
+          <div className="h-4 overflow-hidden text-xs text-stone-600 font-sans leading-4">
+            <div
+              className="transition-transform duration-500 ease-out"
+              style={{ transform: `translateY(-${idleExampleIndex}rem)` }}
+            >
+              {idleExamples.map((example) => (
+                <p key={example} className="h-4 leading-4">
+                  {example}
+                </p>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-stone-600 font-sans">
+            {sublabel}
+          </p>
+        )}
       </div>
     </div>
   )
