@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import Base, engine
 from app.models import Event  # noqa: F401 — ensure model is registered before create_all
+from app.routes import events, voice
 
 load_dotenv()
 
@@ -28,6 +29,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+app.include_router(events.router)
+app.include_router(voice.router)
 
 
 @app.on_event("startup")
