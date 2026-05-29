@@ -28,6 +28,7 @@ export default function App() {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [toasts, setToasts] = useState<Toast[]>([])
   const [lastVoiceText, setLastVoiceText] = useState<string>()
+  const [calendarRange, setCalendarRange] = useState<{ start: string; end: string } | null>(null)
   const now = useNow()
 
   const addToast = useCallback((type: 'success' | 'error', message: string) => {
@@ -44,6 +45,11 @@ export default function App() {
       // silently ignore if backend not running
     }
   }, [])
+
+  const handleDateRangeChange = useCallback((start: string, end: string) => {
+    setCalendarRange({ start, end })
+    loadEvents(start, end)
+  }, [loadEvents])
 
   useEffect(() => { loadEvents() }, [loadEvents])
 
@@ -143,6 +149,8 @@ export default function App() {
             <EventList
               events={events}
               onDelete={handleDelete}
+              rangeStart={calendarRange?.start}
+              rangeEnd={calendarRange?.end}
               className="flex-1"
             />
           </div>
@@ -165,7 +173,7 @@ export default function App() {
         <main className="flex-1 min-w-0 p-4">
           <CalendarView
             events={events}
-            onDateRangeChange={loadEvents}
+            onDateRangeChange={handleDateRangeChange}
             className="h-full"
           />
         </main>
