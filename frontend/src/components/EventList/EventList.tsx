@@ -1,3 +1,4 @@
+import { useState, useRef } from 'react'
 import { Clock, Calendar, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { CalendarEvent } from '@/api/events'
@@ -39,6 +40,101 @@ function groupByDate(events: CalendarEvent[]) {
   return groups
 }
 
+// SVG circle r=9 → circumference = 2π×9 ≈ 56.55
+const CIRCUMFERENCE = 56.55
+const HOLD_DURATION = 3000
+
+function EventItem({ event, onDelete }: { event: CalendarEvent; onDelete?: (id: number) => void }) {
+  const [holding, setHolding] = useState(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout>>()
+
+  const startHold = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault()
+    if (!onDelete) return
+    setHolding(true)
+    timerRef.current = setTimeout(() => {
+      setHolding(false)
+      onDelete(event.id)
+    }, HOLD_DURATION)
+  }
+
+  const cancelHold = () => {
+    clearTimeout(timerRef.current)
+    timerRef.current = undefined
+    setHolding(false)
+  }
+
+  return (
+    <div
+      className="group flex items-start gap-3 px-3 py-2.5 rounded-lg
+                 bg-white/[0.02] border border-white/[0.04]
+                 hover:bg-white/[0.04] hover:border-white/[0.07]
+                 transition-all duration-150"
+    >
+      {/* Time */}
+      <div className="flex items-center gap-1 pt-0.5 shrink-0">
+        <Clock className="h-3 w-3 text-stone-600" />
+        <span className="font-mono text-[11px] text-stone-500">
+          {formatTime(event.start_time)}
+        </span>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-stone-200 truncate leading-tight">
+          {event.title}
+        </p>
+        {event.description && (
+          <p className="text-xs text-stone-600 truncate mt-0.5">
+            {event.description}
+          </p>
+        )}
+      </div>
+
+      {/* Delete — hold 3s to confirm */}
+      {onDelete && (
+        <button
+          onMouseDown={startHold}
+          onMouseUp={cancelHold}
+          onMouseLeave={cancelHold}
+          onTouchStart={startHold}
+          onTouchEnd={cancelHold}
+          onContextMenu={e => e.preventDefault()}
+          className={cn(
+            'relative shrink-0 p-1 rounded select-none transition-all duration-150',
+            holding
+              ? 'opacity-100 text-red-400 bg-red-500/10'
+              : 'opacity-0 group-hover:opacity-100 text-stone-600 hover:text-red-400 hover:bg-red-500/10',
+          )}
+          aria-label="长按3秒删除事件"
+        >
+          <Trash2 className="h-3 w-3" />
+          {holding && (
+            <svg
+              className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="9"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeDasharray={CIRCUMFERENCE}
+                strokeDashoffset={CIRCUMFERENCE}
+                className="text-red-400"
+                style={{ animation: `holdProgress ${HOLD_DURATION}ms linear forwards` }}
+              />
+            </svg>
+          )}
+        </button>
+      )}
+    </div>
+  )
+}
+
 export function EventList({ events, onDelete, rangeStart, rangeEnd, className }: EventListProps) {
   const upcoming = events
     .filter(e => {
@@ -76,46 +172,7 @@ export function EventList({ events, onDelete, rangeStart, rangeEnd, className }:
 
           <div className="flex flex-col gap-1">
             {groupEvents.map(event => (
-              <div
-                key={event.id}
-                className="group flex items-start gap-3 px-3 py-2.5 rounded-lg
-                           bg-white/[0.02] border border-white/[0.04]
-                           hover:bg-white/[0.04] hover:border-white/[0.07]
-                           transition-all duration-150"
-              >
-                {/* Time */}
-                <div className="flex items-center gap-1 pt-0.5 shrink-0">
-                  <Clock className="h-3 w-3 text-stone-600" />
-                  <span className="font-mono text-[11px] text-stone-500">
-                    {formatTime(event.start_time)}
-                  </span>
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-stone-200 truncate leading-tight">
-                    {event.title}
-                  </p>
-                  {event.description && (
-                    <p className="text-xs text-stone-600 truncate mt-0.5">
-                      {event.description}
-                    </p>
-                  )}
-                </div>
-
-                {/* Delete */}
-                {onDelete && (
-                  <button
-                    onClick={() => onDelete(event.id)}
-                    className="opacity-0 group-hover:opacity-100 shrink-0 p-1 rounded
-                               text-stone-600 hover:text-red-400 hover:bg-red-500/10
-                               transition-all duration-150"
-                    aria-label="删除事件"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </button>
-                )}
-              </div>
+              <EventItem key={event.id} event={event} onDelete={onDelete} />
             ))}
           </div>
         </div>

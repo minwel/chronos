@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { CalendarView } from '@/components/Calendar/CalendarView'
 import { VoiceButton } from '@/components/VoiceButton/VoiceButton'
 import { EventList } from '@/components/EventList/EventList'
@@ -13,7 +13,6 @@ interface Toast {
   id: number
   type: 'success' | 'error'
   message: string
-  onUndo?: () => void
 }
 
 function useNow() {
@@ -29,7 +28,6 @@ export default function App() {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [toasts, setToasts] = useState<Toast[]>([])
   const [lastVoiceText, setLastVoiceText] = useState<string>()
-  const pendingDeletes = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map())
   const [calendarRange, setCalendarRange] = useState<{ start: string; end: string } | null>(null)
   const now = useNow()
 
@@ -79,48 +77,15 @@ export default function App() {
     },
   })
 
-  const handleDelete = useCallback((id: number) => {
-    const eventToDelete = events.find(e => e.id === id)
-    if (!eventToDelete) return
-
-    setEvents(prev => prev.filter(e => e.id !== id))
-
-    const toastId = Date.now()
-
-    const handleUndo = () => {
-      clearTimeout(pendingDeletes.current.get(toastId))
-      pendingDeletes.current.delete(toastId)
-      setEvents(prev =>
-        [...prev, eventToDelete].sort(
-          (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
-        )
-      )
-      setToasts(prev => prev.filter(t => t.id !== toastId))
+  const handleDelete = useCallback(async (id: number) => {
+    try {
+      await eventsApi.remove(id)
+      setEvents(prev => prev.filter(e => e.id !== id))
+      addToast('success', '事件已删除')
+    } catch {
+      addToast('error', '删除失败，请重试')
     }
-
-    const timeoutId = setTimeout(async () => {
-      pendingDeletes.current.delete(toastId)
-      setToasts(prev => prev.filter(t => t.id !== toastId))
-      try {
-        await eventsApi.remove(id)
-      } catch {
-        setEvents(prev =>
-          [...prev, eventToDelete].sort(
-            (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
-          )
-        )
-        addToast('error', '删除失败，请重试')
-      }
-    }, 5000)
-
-    pendingDeletes.current.set(toastId, timeoutId)
-    setToasts(prev => [...prev, {
-      id: toastId,
-      type: 'success',
-      message: `「${eventToDelete.title}」已删除`,
-      onUndo: handleUndo,
-    }])
-  }, [events, addToast])
+  }, [addToast])
 
   const dateStr = now.toLocaleDateString('zh-CN', {
     weekday: 'long',
@@ -228,16 +193,7 @@ export default function App() {
               ? <CheckCircle2 className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
               : <AlertCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
             }
-            <p className="text-sm text-stone-300 flex-1">{toast.message}</p>
-            {toast.onUndo && (
-              <button
-                onClick={toast.onUndo}
-                className="pointer-events-auto shrink-0 text-xs font-medium text-cyan-400
-                           hover:text-cyan-300 underline underline-offset-2 transition-colors"
-              >
-                撤销
-              </button>
-            )}
+            <p className="text-sm text-stone-300">{toast.message}</p>
           </div>
         ))}
       </div>
