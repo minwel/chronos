@@ -53,9 +53,9 @@ Chronos 是一个以**语音交互为核心**的日历管理工具，来源于�
 ### AI / NLP
 | 技术 | 用途 |
 |------|------|
-| Anthropic Claude API (`claude-sonnet-4-6`) | 解析语音文本 → 结构化事件数据（action、title、datetime、recurrence 等） |
+| DeepSeek API (`deepseek-chat`) | 解析语音文本 → 结构化事件数据（action、title、datetime 等），兼容 OpenAI SDK |
 
-> Claude API 负责理解自然语言时间表达（"明天下午三点"、"下周一上午"），提取结构化字段，无需手写正则。
+> DeepSeek API 负责理解自然语言时间表达（"明天下午三点"、"下周一上午"），提取结构化字段，无需手写正则。
 
 ### 工程工具
 | 技术 | 用途 |
@@ -99,8 +99,8 @@ Chronos 是一个以**语音交互为核心**的日历管理工具，来源于�
 ### 核心数据流
 1. 用户按下麦克风按钮 → 启动 `SpeechRecognition`
 2. 识别结果文本 → `POST /api/voice` → FastAPI
-3. FastAPI 调用 Claude API，System Prompt 指定输出 JSON schema
-4. Claude 返回 `{action: "add"|"delete"|"query", event: {...}}`
+3. FastAPI 调用 DeepSeek API，System Prompt 指定输出 JSON schema
+4. DeepSeek 返回 `{action: "add"|"delete"|"query", event: {...}}`
 5. FastAPI 执行数据库操作，返回结果
 6. 前端更新 FullCalendar，TTS 播报确认语
 
