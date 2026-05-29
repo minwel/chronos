@@ -6,11 +6,23 @@ services:
     env_file:
       - ./backend/.env
     volumes:
+      # 挂载源码 + 持久化 SQLite 数据库（chronos.db 落在 ./backend 下）
       - ./backend:/app
+    healthcheck:
+      # python:3.11-slim 自带 python，无需额外安装 curl
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
 
   frontend:
     build: ./frontend
     ports:
-      - "5173:5173"
+      # nginx 容器内监听 80，映射到宿主 5173
+      - "5173:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    restart: unless-stopped

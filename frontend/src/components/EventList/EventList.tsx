@@ -46,7 +46,7 @@ const HOLD_DURATION = 2000
 
 function EventItem({ event, onDelete }: { event: CalendarEvent; onDelete?: (id: number) => void }) {
   const [holding, setHolding] = useState(false)
-  const timerRef = useRef<ReturnType<typeof setTimeout>>()
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const startHold = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault()
