@@ -5,6 +5,8 @@ import type { CalendarEvent } from '@/api/events'
 interface EventListProps {
   events: CalendarEvent[]
   onDelete?: (id: number) => void
+  rangeStart?: string
+  rangeEnd?: string
   className?: string
 }
 
@@ -37,9 +39,15 @@ function groupByDate(events: CalendarEvent[]) {
   return groups
 }
 
-export function EventList({ events, onDelete, className }: EventListProps) {
+export function EventList({ events, onDelete, rangeStart, rangeEnd, className }: EventListProps) {
   const upcoming = events
-    .filter(e => new Date(e.start_time) >= new Date(Date.now() - 3600_000))
+    .filter(e => {
+      const t = new Date(e.start_time).getTime()
+      if (rangeStart && rangeEnd) {
+        return t >= new Date(rangeStart).getTime() && t < new Date(rangeEnd).getTime()
+      }
+      return t >= Date.now() - 3600_000
+    })
     .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
     .slice(0, 20)
 
