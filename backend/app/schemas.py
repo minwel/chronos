@@ -21,12 +21,19 @@ class EventOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class PendingAction(BaseModel):
+    type: str
+    candidates: list[EventOut]
+
+
 class VoiceRequest(BaseModel):
     text: str
+    pending_action: PendingAction | None = None
 
 
 class VoiceResponse(BaseModel):
     action: str
     event: EventOut | None = None
     events: list[EventOut] | None = None
+    candidates: list[EventOut] | None = None
     reply: str

@@ -4,7 +4,7 @@ import { VoiceButton } from '@/components/VoiceButton/VoiceButton'
 import { EventList } from '@/components/EventList/EventList'
 import { useSpeech } from '@/hooks/useSpeech'
 import { eventsApi } from '@/api/events'
-import type { CalendarEvent } from '@/api/events'
+import type { CalendarEvent, PendingAction } from '@/api/events'
 import { Sparkles, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import './App.css'
@@ -24,10 +24,21 @@ function useNow() {
   return now
 }
 
+function speakText(text: string, speakLang = 'zh-CN') {
+  if (!window.speechSynthesis) return
+  window.speechSynthesis.cancel()
+  const utterance = new SpeechSynthesisUtterance(text)
+  utterance.lang = speakLang
+  utterance.rate = 0.95
+  utterance.pitch = 1
+  window.speechSynthesis.speak(utterance)
+}
+
 export default function App() {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [toasts, setToasts] = useState<Toast[]>([])
   const [lastVoiceText, setLastVoiceText] = useState<string>()
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
   const [calendarRange, setCalendarRange] = useState<{ start: string; end: string } | null>(null)
   const now = useNow()
 
@@ -56,19 +67,21 @@ export default function App() {
   const handleVoiceResult = useCallback(async (text: string) => {
     setLastVoiceText(text)
     try {
-      const result = await eventsApi.voice(text)
-      speechHook.speak(result.reply)
+      const result = await eventsApi.voice(text, pendingAction ?? undefined)
+      if (result.action === 'pending_delete' && result.candidates?.length) {
+        setPendingAction({ type: 'delete', candidates: result.candidates })
+      } else {
+        setPendingAction(null)
+      }
+      speakText(result.reply)
       addToast('success', result.reply)
       await loadEvents()
     } catch {
       const errMsg = '抱歉，指令处理失败，请重试。'
-      speechHook.speak(errMsg)
+      speakText(errMsg)
       addToast('error', errMsg)
-    } finally {
-      speechHook.finishProcessing()
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addToast, loadEvents])
+  }, [addToast, loadEvents, pendingAction])
 
   const speechHook = useSpeech({
     onResult: handleVoiceResult,
