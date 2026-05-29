@@ -24,16 +24,6 @@ function useNow() {
   return now
 }
 
-function speakText(text: string, speakLang = 'zh-CN') {
-  if (!window.speechSynthesis) return
-  window.speechSynthesis.cancel()
-  const utterance = new SpeechSynthesisUtterance(text)
-  utterance.lang = speakLang
-  utterance.rate = 0.95
-  utterance.pitch = 1
-  window.speechSynthesis.speak(utterance)
-}
-
 export default function App() {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [toasts, setToasts] = useState<Toast[]>([])
@@ -68,19 +58,26 @@ export default function App() {
     setLastVoiceText(text)
     try {
       const result = await eventsApi.voice(text, pendingAction ?? undefined)
-      if (result.action === 'pending_delete' && result.candidates?.length) {
-        setPendingAction({ type: 'delete', candidates: result.candidates })
+      const isPending = result.action === 'pending_delete' && !!result.candidates?.length
+      if (isPending) {
+        setPendingAction({ type: 'delete', candidates: result.candidates! })
+        speechHook.setAwaitingConfirm()
+        speechHook.speak(result.reply, () => {
+          // TTS 播报完反问后自动开麦等待用户确认
+          speechHook.start()
+        })
       } else {
         setPendingAction(null)
+        speechHook.speak(result.reply)
       }
-      speakText(result.reply)
-      addToast('success', result.reply)
+      addToast(isPending ? 'success' : 'success', result.reply)
       await loadEvents()
     } catch {
       const errMsg = '抱歉，指令处理失败，请重试。'
-      speakText(errMsg)
+      speechHook.speak(errMsg)
       addToast('error', errMsg)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addToast, loadEvents, pendingAction])
 
   const speechHook = useSpeech({

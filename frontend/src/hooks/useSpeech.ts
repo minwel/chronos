@@ -33,7 +33,7 @@ interface UseSpeechOptions {
   lang?: string
 }
 
-export type SpeechState = 'idle' | 'listening' | 'processing'
+export type SpeechState = 'idle' | 'listening' | 'processing' | 'awaiting_confirm'
 
 export function useSpeech({ onResult, onError, lang = 'zh-CN' }: UseSpeechOptions) {
   const [state, setState] = useState<SpeechState>('idle')
@@ -58,7 +58,8 @@ export function useSpeech({ onResult, onError, lang = 'zh-CN' }: UseSpeechOption
       const text = event.results[0][0].transcript
       setState('processing')
       Promise.resolve(onResult(text)).finally(() => {
-        setState('idle')
+        // 只在仍为 processing 时回到 idle，避免覆盖 awaiting_confirm 等状态
+        setState(prev => prev === 'processing' ? 'idle' : prev)
       })
     }
 
@@ -80,15 +81,25 @@ export function useSpeech({ onResult, onError, lang = 'zh-CN' }: UseSpeechOption
     setState('idle')
   }, [])
 
-  const speak = useCallback((text: string, speakLang = 'zh-CN') => {
-    if (!window.speechSynthesis) return
+  const speak = useCallback((text: string, onEnd?: () => void, speakLang = 'zh-CN') => {
+    if (!window.speechSynthesis) {
+      onEnd?.()
+      return
+    }
     window.speechSynthesis.cancel()
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.lang = speakLang
     utterance.rate = 0.95
     utterance.pitch = 1
+    if (onEnd) {
+      utterance.onend = () => onEnd()
+    }
     window.speechSynthesis.speak(utterance)
   }, [])
 
-  return { state, start, stop, speak }
+  const setAwaitingConfirm = useCallback(() => {
+    setState('awaiting_confirm')
+  }, [])
+
+  return { state, start, stop, speak, setAwaitingConfirm }
 }

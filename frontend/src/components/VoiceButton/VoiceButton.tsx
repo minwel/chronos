@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Mic, Loader2 } from 'lucide-react'
+import { Mic, Loader2, HelpCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { SpeechState } from '@/hooks/useSpeech'
 
@@ -41,6 +41,16 @@ const stateConfig = {
     iconColor: 'text-cyan-400',
     bgColor: 'bg-cyan-500/10',
     pulseColor: 'bg-cyan-500/20',
+  },
+  awaiting_confirm: {
+    label: '等待确认…',
+    sublabel: '请说"是"或"不要"来回答',
+    icon: HelpCircle,
+    ringColor: 'border-violet-500/50',
+    glowColor: 'shadow-[0_0_35px_rgba(139,92,246,0.25)]',
+    iconColor: 'text-violet-400',
+    bgColor: 'bg-violet-500/15',
+    pulseColor: 'bg-violet-500/20',
   },
 }
 
@@ -85,6 +95,12 @@ export function VoiceButton({ state, onStart, onStop, lastText, className }: Voi
             <span className="absolute h-28 w-28 rounded-full bg-amber-400/10 animate-[ripple_2s_ease-out_1.2s_infinite]" />
           </>
         )}
+        {state === 'awaiting_confirm' && (
+          <>
+            <span className="absolute h-28 w-28 rounded-full bg-violet-400/10 animate-[ripple_2.5s_ease-out_infinite]" />
+            <span className="absolute h-28 w-28 rounded-full bg-violet-400/10 animate-[ripple_2.5s_ease-out_0.8s_infinite]" />
+          </>
+        )}
 
         {/* Main button */}
         <button
@@ -106,6 +122,7 @@ export function VoiceButton({ state, onStart, onStop, lastText, className }: Voi
               config.iconColor,
               state === 'processing' && 'animate-spin',
               state === 'listening' && 'animate-[float_1.5s_ease-in-out_infinite]',
+              state === 'awaiting_confirm' && 'animate-pulse',
             )}
           />
         </button>
@@ -118,6 +135,7 @@ export function VoiceButton({ state, onStart, onStop, lastText, className }: Voi
           state === 'idle' && 'text-stone-500',
           state === 'listening' && 'text-amber-400',
           state === 'processing' && 'text-cyan-400',
+          state === 'awaiting_confirm' && 'text-violet-400',
         )}>
           {config.label}
         </p>
