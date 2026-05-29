@@ -42,7 +42,7 @@ function groupByDate(events: CalendarEvent[]) {
 
 // SVG circle r=9 → circumference = 2π×9 ≈ 56.55
 const CIRCUMFERENCE = 56.55
-const HOLD_DURATION = 3000
+const HOLD_DURATION = 2000
 
 function EventItem({ event, onDelete }: { event: CalendarEvent; onDelete?: (id: number) => void }) {
   const [holding, setHolding] = useState(false)
