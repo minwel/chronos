@@ -39,11 +39,12 @@ interface UseSpeechOptions {
   lang?: string
 }
 
-export type SpeechState = 'idle' | 'listening' | 'processing' | 'awaiting_confirm'
+export type SpeechState = 'idle' | 'listening' | 'editing' | 'processing' | 'awaiting_confirm'
 
 export function useSpeech({ onResult, onError, lang = 'zh-CN' }: UseSpeechOptions) {
   const [state, setState] = useState<SpeechState>('idle')
   const [interimText, setInterimText] = useState('')
+  const [draftText, setDraftText] = useState('')
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
   // 用 ref 保持回调最新引用，避免 TTS onEnd 自动开麦时闭包捕获旧的 pendingAction 等状态
   const onResultRef = useRef(onResult)
@@ -75,10 +76,8 @@ export function useSpeech({ onResult, onError, lang = 'zh-CN' }: UseSpeechOption
       const text = result[0].transcript
       if (result.isFinal) {
         setInterimText('')
-        setState('processing')
-        Promise.resolve(onResultRef.current(text)).finally(() => {
-          setState(prev => prev === 'processing' ? 'idle' : prev)
-        })
+        setDraftText(text)
+        setState('editing')
       } else {
         setInterimText(text)
       }
@@ -123,9 +122,22 @@ export function useSpeech({ onResult, onError, lang = 'zh-CN' }: UseSpeechOption
     }, 150)
   }, [])
 
+  const submitDraft = useCallback((text: string) => {
+    setDraftText('')
+    setState('processing')
+    Promise.resolve(onResultRef.current(text)).finally(() => {
+      setState(prev => prev === 'processing' ? 'idle' : prev)
+    })
+  }, [])
+
+  const cancelDraft = useCallback(() => {
+    setDraftText('')
+    setState('idle')
+  }, [])
+
   const setAwaitingConfirm = useCallback(() => {
     setState('awaiting_confirm')
   }, [])
 
-  return { state, interimText, start, stop, speak, setAwaitingConfirm }
+  return { state, interimText, draftText, start, stop, speak, submitDraft, cancelDraft, setAwaitingConfirm }
 }

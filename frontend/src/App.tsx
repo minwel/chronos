@@ -222,6 +222,9 @@ export default function App() {
               onStart={speechHook.start}
               onStop={speechHook.stop}
               onCancel={cancelProcessing}
+              onSubmitDraft={speechHook.submitDraft}
+              onCancelDraft={speechHook.cancelDraft}
+              draftText={speechHook.draftText}
               lastText={lastVoiceText}
               interimText={speechHook.interimText}
             />
