@@ -1,7 +1,13 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 
+interface SpeechRecognitionResult {
+  readonly isFinal: boolean
+  readonly length: number
+  [index: number]: { transcript: string }
+}
+
 interface SpeechRecognitionEvent {
-  results: SpeechRecognitionResultList
+  results: SpeechRecognitionResult[]
 }
 
 interface SpeechRecognitionErrorEvent {
@@ -37,6 +43,7 @@ export type SpeechState = 'idle' | 'listening' | 'processing' | 'awaiting_confir
 
 export function useSpeech({ onResult, onError, lang = 'zh-CN' }: UseSpeechOptions) {
   const [state, setState] = useState<SpeechState>('idle')
+  const [interimText, setInterimText] = useState('')
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
   // 用 ref 保持回调最新引用，避免 TTS onEnd 自动开麦时闭包捕获旧的 pendingAction 等状态
   const onResultRef = useRef(onResult)
@@ -55,17 +62,26 @@ export function useSpeech({ onResult, onError, lang = 'zh-CN' }: UseSpeechOption
 
     const recognition = new SpeechRecognitionCtor()
     recognition.lang = lang
-    recognition.interimResults = false
+    recognition.interimResults = true
     recognition.maxAlternatives = 1
 
-    recognition.onstart = () => setState('listening')
+    recognition.onstart = () => {
+      setInterimText('')
+      setState('listening')
+    }
 
     recognition.onresult = (event) => {
-      const text = event.results[0][0].transcript
-      setState('processing')
-      Promise.resolve(onResultRef.current(text)).finally(() => {
-        setState(prev => prev === 'processing' ? 'idle' : prev)
-      })
+      const result = event.results[0]
+      const text = result[0].transcript
+      if (result.isFinal) {
+        setInterimText('')
+        setState('processing')
+        Promise.resolve(onResultRef.current(text)).finally(() => {
+          setState(prev => prev === 'processing' ? 'idle' : prev)
+        })
+      } else {
+        setInterimText(text)
+      }
     }
 
     recognition.onerror = (event) => {
@@ -83,6 +99,7 @@ export function useSpeech({ onResult, onError, lang = 'zh-CN' }: UseSpeechOption
 
   const stop = useCallback(() => {
     recognitionRef.current?.stop()
+    setInterimText('')
     setState('idle')
   }, [])
 
@@ -110,5 +127,5 @@ export function useSpeech({ onResult, onError, lang = 'zh-CN' }: UseSpeechOption
     setState('awaiting_confirm')
   }, [])
 
-  return { state, start, stop, speak, setAwaitingConfirm }
+  return { state, interimText, start, stop, speak, setAwaitingConfirm }
 }

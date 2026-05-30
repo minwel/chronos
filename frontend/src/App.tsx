@@ -175,6 +175,7 @@ export default function App() {
               onStart={speechHook.start}
               onStop={speechHook.stop}
               lastText={lastVoiceText}
+              interimText={speechHook.interimText}
             />
           </div>
         </aside>
