@@ -5,7 +5,7 @@ import { EventList } from '@/components/EventList/EventList'
 import { useSpeech } from '@/hooks/useSpeech'
 import { eventsApi } from '@/api/events'
 import type { CalendarEvent, PendingAction } from '@/api/events'
-import { Sparkles, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Sparkles, AlertCircle, CheckCircle2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import './App.css'
 
@@ -32,11 +32,17 @@ export default function App() {
   const [calendarRange, setCalendarRange] = useState<{ start: string; end: string } | null>(null)
   const now = useNow()
 
-  const addToast = useCallback((type: 'success' | 'error', message: string) => {
+  const removeToast = useCallback((id: number) => {
+    setToasts(prev => prev.filter(t => t.id !== id))
+  }, [])
+
+  const addToast = useCallback((type: 'success' | 'error', message: string, delay = 0) => {
     const id = Date.now()
     setToasts(prev => [...prev, { id, type, message }])
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000)
-  }, [])
+    // delay: TTS 播报期间保持显示，播完后再倒计时
+    const readTime = Math.max(4000, message.length * 80)
+    setTimeout(() => removeToast(id), delay + readTime)
+  }, [removeToast])
 
   const loadEvents = useCallback(async (start?: string, end?: string) => {
     try {
@@ -70,12 +76,15 @@ export default function App() {
         setPendingAction(null)
         speechHook.speak(result.reply)
       }
-      addToast(isPending ? 'success' : 'success', result.reply)
+      // 估算 TTS 播报时长（中文约 250ms/字，rate=0.95），Toast 在播报结束后再开始倒计时
+      const ttsDelay = Math.round(result.reply.length * 250 / 0.95)
+      addToast('success', result.reply, ttsDelay)
       await loadEvents()
     } catch {
       const errMsg = '抱歉，指令处理失败，请重试。'
       speechHook.speak(errMsg)
-      addToast('error', errMsg)
+      const errTtsDelay = Math.round(errMsg.length * 250 / 0.95)
+      addToast('error', errMsg, errTtsDelay)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addToast, loadEvents, pendingAction])
@@ -191,7 +200,7 @@ export default function App() {
       </div>
 
       {/* Toast notifications */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none">
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2">
         {toasts.map(toast => (
           <div
             key={toast.id}
@@ -204,7 +213,14 @@ export default function App() {
               ? <CheckCircle2 className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
               : <AlertCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
             }
-            <p className="text-sm text-stone-300">{toast.message}</p>
+            <p className="text-sm text-stone-300 flex-1">{toast.message}</p>
+            <button
+              onClick={() => removeToast(toast.id)}
+              className="text-stone-500 hover:text-stone-300 transition-colors shrink-0 mt-0.5 cursor-pointer"
+              aria-label="关闭"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
           </div>
         ))}
       </div>
