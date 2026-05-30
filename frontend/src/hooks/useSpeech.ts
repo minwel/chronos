@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 
 interface SpeechRecognitionEvent {
   results: SpeechRecognitionResultList
@@ -38,12 +38,18 @@ export type SpeechState = 'idle' | 'listening' | 'processing' | 'awaiting_confir
 export function useSpeech({ onResult, onError, lang = 'zh-CN' }: UseSpeechOptions) {
   const [state, setState] = useState<SpeechState>('idle')
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
+  // 用 ref 保持回调最新引用，避免 TTS onEnd 自动开麦时闭包捕获旧的 pendingAction 等状态
+  const onResultRef = useRef(onResult)
+  const onErrorRef = useRef(onError)
+
+  useEffect(() => { onResultRef.current = onResult }, [onResult])
+  useEffect(() => { onErrorRef.current = onError }, [onError])
 
   const start = useCallback(() => {
     const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition
 
     if (!SpeechRecognitionCtor) {
-      onError?.('您的浏览器不支持语音识别，请使用 Chrome 或 Edge。')
+      onErrorRef.current?.('您的浏览器不支持语音识别，请使用 Chrome 或 Edge。')
       return
     }
 
@@ -57,15 +63,14 @@ export function useSpeech({ onResult, onError, lang = 'zh-CN' }: UseSpeechOption
     recognition.onresult = (event) => {
       const text = event.results[0][0].transcript
       setState('processing')
-      Promise.resolve(onResult(text)).finally(() => {
-        // 只在仍为 processing 时回到 idle，避免覆盖 awaiting_confirm 等状态
+      Promise.resolve(onResultRef.current(text)).finally(() => {
         setState(prev => prev === 'processing' ? 'idle' : prev)
       })
     }
 
     recognition.onerror = (event) => {
       setState('idle')
-      onError?.(event.error === 'no-speech' ? '未检测到语音，请重试。' : `语音识别错误：${event.error}`)
+      onErrorRef.current?.(event.error === 'no-speech' ? '未检测到语音，请重试。' : `语音识别错误：${event.error}`)
     }
 
     recognition.onend = () => {
@@ -74,7 +79,7 @@ export function useSpeech({ onResult, onError, lang = 'zh-CN' }: UseSpeechOption
 
     recognitionRef.current = recognition
     recognition.start()
-  }, [lang, onResult, onError])
+  }, [lang])
 
   const stop = useCallback(() => {
     recognitionRef.current?.stop()
