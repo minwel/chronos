@@ -37,6 +37,6 @@ export const eventsApi = {
   remove: (id: number) =>
     api.delete(`/events/${id}`).then(r => r.data),
 
-  voice: (text: string, pendingAction?: PendingAction) =>
-    api.post<VoiceResponse>('/voice', { text, pending_action: pendingAction }).then(r => r.data),
+  voice: (text: string, pendingAction?: PendingAction, signal?: AbortSignal) =>
+    api.post<VoiceResponse>('/voice', { text, pending_action: pendingAction }, { signal }).then(r => r.data),
 }
