@@ -5,7 +5,7 @@ import { EventList } from '@/components/EventList/EventList'
 import { useSpeech } from '@/hooks/useSpeech'
 import { eventsApi } from '@/api/events'
 import type { CalendarEvent, PendingAction } from '@/api/events'
-import { Sparkles, AlertCircle, CheckCircle2, X } from 'lucide-react'
+import { Sparkles, AlertCircle, CheckCircle2, X, WifiOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import './App.css'
 
@@ -30,6 +30,7 @@ export default function App() {
   const [lastVoiceText, setLastVoiceText] = useState<string>()
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
   const [calendarRange, setCalendarRange] = useState<{ start: string; end: string } | null>(null)
+  const [backendOffline, setBackendOffline] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
   const now = useNow()
 
@@ -49,8 +50,9 @@ export default function App() {
     try {
       const data = await eventsApi.list(start, end)
       setEvents(data)
+      setBackendOffline(false)
     } catch {
-      // silently ignore if backend not running
+      setBackendOffline(true)
     }
   }, [])
 
@@ -79,6 +81,7 @@ export default function App() {
         setPendingAction(null)
         speechHook.speak(result.reply)
       }
+      setBackendOffline(false)
       const ttsDelay = Math.round(result.reply.length * 250 / 0.95)
       addToast('success', result.reply, ttsDelay)
       await loadEvents()
@@ -87,7 +90,9 @@ export default function App() {
         const msg = controller.signal.reason === 'timeout' ? '请求超时，请重试。' : '已取消。'
         addToast('error', msg)
       } else {
-        const errMsg = '抱歉，指令处理失败，请重试。'
+        const isNetwork = err instanceof Error && ('code' in err || err.message === 'Network Error')
+        if (isNetwork) setBackendOffline(true)
+        const errMsg = isNetwork ? '无法连接后端服务，请确认后端已启动。' : '抱歉，指令处理失败，请重试。'
         speechHook.speak(errMsg)
         const errTtsDelay = Math.round(errMsg.length * 250 / 0.95)
         addToast('error', errMsg, errTtsDelay)
@@ -163,6 +168,22 @@ export default function App() {
           {timeStr}
         </div>
       </header>
+
+      {/* Backend offline banner */}
+      {backendOffline && (
+        <div className="relative z-10 flex items-center gap-2 px-4 py-2 bg-red-500/10 border-b border-red-500/20">
+          <WifiOff className="h-4 w-4 text-red-400 shrink-0" />
+          <p className="text-sm text-red-300">
+            无法连接后端服务，请确认后端已启动（端口 8000）
+          </p>
+          <button
+            onClick={() => loadEvents(calendarRange?.start, calendarRange?.end)}
+            className="ml-auto text-xs text-red-400 hover:text-red-300 border border-red-500/30 rounded px-2 py-0.5 cursor-pointer transition-colors"
+          >
+            重试
+          </button>
+        </div>
+      )}
 
       {/* Main layout */}
       <div className="relative z-10 flex flex-1 min-h-0">
