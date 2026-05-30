@@ -36,6 +36,7 @@ export function CalendarView({ events, onDateRangeChange, onEventClick, classNam
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
         initialView="dayGridMonth"
         locale="zh-cn"
+        firstDay={1}
         headerToolbar={{
           left: 'prev,next today',
           center: 'title',
