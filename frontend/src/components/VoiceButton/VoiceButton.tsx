@@ -8,6 +8,7 @@ interface VoiceButtonProps {
   onStart: () => void
   onStop: () => void
   lastText?: string
+  interimText?: string
   className?: string
 }
 
@@ -61,7 +62,7 @@ const idleExamples = [
   '「下周一上午十点健身」',
 ]
 
-export function VoiceButton({ state, onStart, onStop, lastText, className }: VoiceButtonProps) {
+export function VoiceButton({ state, onStart, onStop, lastText, interimText, className }: VoiceButtonProps) {
   const config = stateConfig[state]
   const Icon = config.icon
   const [idleExampleIndex, setIdleExampleIndex] = useState(0)
@@ -152,6 +153,10 @@ export function VoiceButton({ state, onStart, onStop, lastText, className }: Voi
               ))}
             </div>
           </div>
+        ) : state === 'listening' && interimText ? (
+          <p className="text-sm text-amber-300/80 font-sans italic max-w-[220px] truncate">
+            {interimText}
+          </p>
         ) : (
           <p className="text-xs text-stone-600 font-sans">
             {sublabel}
