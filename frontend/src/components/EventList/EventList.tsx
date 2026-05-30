@@ -18,6 +18,8 @@ interface EventListProps {
   onDelete?: (id: number) => void
   rangeStart?: string
   rangeEnd?: string
+  selectedId?: number | null
+  onSelect?: (id: number | null) => void
   className?: string
 }
 
@@ -50,13 +52,22 @@ function groupByDate(events: CalendarEvent[]) {
   return groups
 }
 
-function EventItem({ event, onDelete }: { event: CalendarEvent; onDelete?: (id: number) => void }) {
+function EventItem({ event, onDelete, selected, onSelect }: {
+  event: CalendarEvent
+  onDelete?: (id: number) => void
+  selected?: boolean
+  onSelect?: (id: number | null) => void
+}) {
   return (
     <div
-      className="group flex items-start gap-3 px-3 py-2.5 rounded-lg
-                 bg-white/[0.02] border border-white/[0.04]
-                 hover:bg-white/[0.04] hover:border-white/[0.07]
-                 transition-all duration-150"
+      onClick={() => onSelect?.(selected ? null : event.id)}
+      className={cn(
+        'group flex items-start gap-3 px-3 py-2.5 rounded-lg cursor-pointer',
+        'border transition-all duration-150',
+        selected
+          ? 'bg-amber-500/10 border-amber-500/30'
+          : 'bg-white/[0.02] border-white/[0.04] hover:bg-white/[0.04] hover:border-white/[0.07]',
+      )}
     >
       {/* Time */}
       <div className="flex items-center gap-1 pt-0.5 shrink-0">
@@ -117,7 +128,7 @@ function EventItem({ event, onDelete }: { event: CalendarEvent; onDelete?: (id: 
   )
 }
 
-export function EventList({ events, onDelete, rangeStart, rangeEnd, className }: EventListProps) {
+export function EventList({ events, onDelete, rangeStart, rangeEnd, selectedId, onSelect, className }: EventListProps) {
   const upcoming = events
     .filter(e => {
       const t = new Date(e.start_time).getTime()
@@ -154,7 +165,13 @@ export function EventList({ events, onDelete, rangeStart, rangeEnd, className }:
 
           <div className="flex flex-col gap-1">
             {groupEvents.map(event => (
-              <EventItem key={event.id} event={event} onDelete={onDelete} />
+              <EventItem
+                key={event.id}
+                event={event}
+                onDelete={onDelete}
+                selected={selectedId === event.id}
+                onSelect={onSelect}
+              />
             ))}
           </div>
         </div>

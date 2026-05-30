@@ -31,6 +31,7 @@ export default function App() {
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
   const [calendarRange, setCalendarRange] = useState<{ start: string; end: string } | null>(null)
   const [backendOffline, setBackendOffline] = useState(false)
+  const [selectedEventId, setSelectedEventId] = useState<number | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const now = useNow()
 
@@ -205,6 +206,8 @@ export default function App() {
               onDelete={handleDelete}
               rangeStart={calendarRange?.start}
               rangeEnd={calendarRange?.end}
+              selectedId={selectedEventId}
+              onSelect={setSelectedEventId}
               className="flex-1"
             />
           </div>
@@ -230,6 +233,7 @@ export default function App() {
           <CalendarView
             events={events}
             onDateRangeChange={handleDateRangeChange}
+            onEventClick={(id) => setSelectedEventId(prev => prev === id ? null : id)}
             className="h-full"
           />
         </main>
