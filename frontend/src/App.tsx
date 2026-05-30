@@ -5,7 +5,7 @@ import { EventList } from '@/components/EventList/EventList'
 import { useSpeech } from '@/hooks/useSpeech'
 import { eventsApi } from '@/api/events'
 import type { CalendarEvent, PendingAction } from '@/api/events'
-import { Sparkles, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Sparkles, AlertCircle, CheckCircle2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import './App.css'
 
@@ -32,11 +32,16 @@ export default function App() {
   const [calendarRange, setCalendarRange] = useState<{ start: string; end: string } | null>(null)
   const now = useNow()
 
+  const removeToast = useCallback((id: number) => {
+    setToasts(prev => prev.filter(t => t.id !== id))
+  }, [])
+
   const addToast = useCallback((type: 'success' | 'error', message: string) => {
     const id = Date.now()
     setToasts(prev => [...prev, { id, type, message }])
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000)
-  }, [])
+    const duration = Math.max(4000, message.length * 80)
+    setTimeout(() => removeToast(id), duration)
+  }, [removeToast])
 
   const loadEvents = useCallback(async (start?: string, end?: string) => {
     try {
@@ -191,7 +196,7 @@ export default function App() {
       </div>
 
       {/* Toast notifications */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none">
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2">
         {toasts.map(toast => (
           <div
             key={toast.id}
@@ -204,7 +209,14 @@ export default function App() {
               ? <CheckCircle2 className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
               : <AlertCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
             }
-            <p className="text-sm text-stone-300">{toast.message}</p>
+            <p className="text-sm text-stone-300 flex-1">{toast.message}</p>
+            <button
+              onClick={() => removeToast(toast.id)}
+              className="text-stone-500 hover:text-stone-300 transition-colors shrink-0 mt-0.5 cursor-pointer"
+              aria-label="关闭"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
           </div>
         ))}
       </div>
