@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Mic, Loader2, HelpCircle, X } from 'lucide-react'
+import { Mic, Loader2, HelpCircle, X, Send, PenLine } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { SpeechState } from '@/hooks/useSpeech'
 
@@ -8,6 +8,9 @@ interface VoiceButtonProps {
   onStart: () => void
   onStop: () => void
   onCancel?: () => void
+  onSubmitDraft?: (text: string) => void
+  onCancelDraft?: () => void
+  draftText?: string
   lastText?: string
   interimText?: string
   className?: string
@@ -33,6 +36,16 @@ const stateConfig = {
     iconColor: 'text-amber-300',
     bgColor: 'bg-amber-500/20',
     pulseColor: 'bg-amber-400/30',
+  },
+  editing: {
+    label: '确认指令',
+    sublabel: '编辑后按回车发送',
+    icon: PenLine,
+    ringColor: 'border-emerald-500/40',
+    glowColor: 'shadow-[0_0_30px_rgba(16,185,129,0.2)]',
+    iconColor: 'text-emerald-400',
+    bgColor: 'bg-emerald-500/10',
+    pulseColor: 'bg-emerald-500/20',
   },
   processing: {
     label: '解析中…',
@@ -63,10 +76,17 @@ const idleExamples = [
   '「下周一上午十点健身」',
 ]
 
-export function VoiceButton({ state, onStart, onStop, onCancel, lastText, interimText, className }: VoiceButtonProps) {
+export function VoiceButton({ state, onStart, onStop, onCancel, onSubmitDraft, onCancelDraft, draftText, lastText, interimText, className }: VoiceButtonProps) {
   const config = stateConfig[state]
   const Icon = config.icon
   const [idleExampleIndex, setIdleExampleIndex] = useState(0)
+  const [editText, setEditText] = useState('')
+
+  useEffect(() => {
+    if (state === 'editing' && draftText) {
+      setEditText(draftText)
+    }
+  }, [state, draftText])
 
   useEffect(() => {
     if (state !== 'idle') return
@@ -82,6 +102,12 @@ export function VoiceButton({ state, onStart, onStop, onCancel, lastText, interi
     if (state === 'idle') onStart()
     else if (state === 'listening') onStop()
     else if (state === 'processing') onCancel?.()
+  }
+
+  const handleSubmitEdit = () => {
+    if (editText.trim()) {
+      onSubmitDraft?.(editText.trim())
+    }
   }
 
   const sublabel = lastText ? `"${lastText}"` : config.sublabel
@@ -135,40 +161,75 @@ export function VoiceButton({ state, onStart, onStop, onCancel, lastText, interi
         </button>
       </div>
 
-      {/* State label */}
-      <div className="text-center space-y-1">
-        <p className={cn(
-          'font-mono text-xs font-medium tracking-widest uppercase transition-colors duration-300',
-          state === 'idle' && 'text-stone-500',
-          state === 'listening' && 'text-amber-400',
-          state === 'processing' && 'text-cyan-400',
-          state === 'awaiting_confirm' && 'text-violet-400',
-        )}>
-          {config.label}
-        </p>
-        {state === 'idle' ? (
-          <div className="h-4 overflow-hidden text-xs text-stone-600 font-sans leading-4">
-            <div
-              className="transition-transform duration-500 ease-out"
-              style={{ transform: `translateY(-${idleExampleIndex}rem)` }}
+      {/* State label / Edit UI */}
+      {state === 'editing' ? (
+        <div className="w-full space-y-2">
+          <p className="font-mono text-xs font-medium tracking-widest uppercase text-emerald-400 text-center">
+            {config.label}
+          </p>
+          <div className="flex items-center gap-1.5">
+            <input
+              type="text"
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSubmitEdit() }}
+              autoFocus
+              className="flex-1 bg-white/[0.05] border border-white/[0.1] rounded-lg px-3 py-1.5
+                         text-sm text-stone-200 placeholder-stone-600
+                         focus:outline-none focus:border-emerald-500/50 transition-colors"
+              placeholder="编辑语音指令..."
+            />
+            <button
+              onClick={handleSubmitEdit}
+              className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors cursor-pointer"
+              aria-label="发送"
             >
-              {idleExamples.map((example) => (
-                <p key={example} className="h-4 leading-4">
-                  {example}
-                </p>
-              ))}
-            </div>
+              <Send className="h-4 w-4" />
+            </button>
+            <button
+              onClick={onCancelDraft}
+              className="p-1.5 rounded-lg bg-white/[0.05] text-stone-500 hover:text-stone-300 hover:bg-white/[0.1] transition-colors cursor-pointer"
+              aria-label="取消"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
-        ) : state === 'listening' && interimText ? (
-          <p className="text-sm text-amber-300/80 font-sans italic max-w-[220px] truncate">
-            {interimText}
+        </div>
+      ) : (
+        <div className="text-center space-y-1">
+          <p className={cn(
+            'font-mono text-xs font-medium tracking-widest uppercase transition-colors duration-300',
+            state === 'idle' && 'text-stone-500',
+            state === 'listening' && 'text-amber-400',
+            state === 'processing' && 'text-cyan-400',
+            state === 'awaiting_confirm' && 'text-violet-400',
+          )}>
+            {config.label}
           </p>
-        ) : (
-          <p className="text-xs text-stone-600 font-sans">
-            {sublabel}
-          </p>
-        )}
-      </div>
+          {state === 'idle' ? (
+            <div className="h-4 overflow-hidden text-xs text-stone-600 font-sans leading-4">
+              <div
+                className="transition-transform duration-500 ease-out"
+                style={{ transform: `translateY(-${idleExampleIndex}rem)` }}
+              >
+                {idleExamples.map((example) => (
+                  <p key={example} className="h-4 leading-4">
+                    {example}
+                  </p>
+                ))}
+              </div>
+            </div>
+          ) : state === 'listening' && interimText ? (
+            <p className="text-sm text-amber-300/80 font-sans italic max-w-[220px] truncate">
+              {interimText}
+            </p>
+          ) : (
+            <p className="text-xs text-stone-600 font-sans">
+              {sublabel}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   )
 }
