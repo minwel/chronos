@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Mic, Loader2, HelpCircle } from 'lucide-react'
+import { Mic, Loader2, HelpCircle, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { SpeechState } from '@/hooks/useSpeech'
 
@@ -7,6 +7,7 @@ interface VoiceButtonProps {
   state: SpeechState
   onStart: () => void
   onStop: () => void
+  onCancel?: () => void
   lastText?: string
   interimText?: string
   className?: string
@@ -35,7 +36,7 @@ const stateConfig = {
   },
   processing: {
     label: '解析中…',
-    sublabel: 'Chronos 正在理解您的意图',
+    sublabel: '点击取消',
     icon: Loader2,
     ringColor: 'border-cyan-500/40',
     glowColor: 'shadow-[0_0_30px_rgba(6,182,212,0.2)]',
@@ -62,7 +63,7 @@ const idleExamples = [
   '「下周一上午十点健身」',
 ]
 
-export function VoiceButton({ state, onStart, onStop, lastText, interimText, className }: VoiceButtonProps) {
+export function VoiceButton({ state, onStart, onStop, onCancel, lastText, interimText, className }: VoiceButtonProps) {
   const config = stateConfig[state]
   const Icon = config.icon
   const [idleExampleIndex, setIdleExampleIndex] = useState(0)
@@ -80,6 +81,7 @@ export function VoiceButton({ state, onStart, onStop, lastText, interimText, cla
   const handleClick = () => {
     if (state === 'idle') onStart()
     else if (state === 'listening') onStop()
+    else if (state === 'processing') onCancel?.()
   }
 
   const sublabel = lastText ? `"${lastText}"` : config.sublabel
@@ -106,26 +108,30 @@ export function VoiceButton({ state, onStart, onStop, lastText, interimText, cla
         {/* Main button */}
         <button
           onClick={handleClick}
-          disabled={state === 'processing'}
           className={cn(
             'relative z-10 flex h-20 w-20 items-center justify-center rounded-full',
             'border-2 transition-all duration-300 cursor-pointer',
-            'disabled:cursor-not-allowed',
             config.ringColor,
             config.glowColor,
             config.bgColor,
           )}
-          aria-label={config.label}
+          aria-label={state === 'processing' ? '取消' : config.label}
         >
-          <Icon
-            className={cn(
-              'h-8 w-8 transition-all duration-300',
-              config.iconColor,
-              state === 'processing' && 'animate-spin',
-              state === 'listening' && 'animate-[float_1.5s_ease-in-out_infinite]',
-              state === 'awaiting_confirm' && 'animate-pulse',
-            )}
-          />
+          {state === 'processing' ? (
+            <div className="relative">
+              <Loader2 className="h-8 w-8 text-cyan-400 animate-spin" />
+              <X className="absolute inset-0 m-auto h-4 w-4 text-cyan-300" />
+            </div>
+          ) : (
+            <Icon
+              className={cn(
+                'h-8 w-8 transition-all duration-300',
+                config.iconColor,
+                state === 'listening' && 'animate-[float_1.5s_ease-in-out_infinite]',
+                state === 'awaiting_confirm' && 'animate-pulse',
+              )}
+            />
+          )}
         </button>
       </div>
 

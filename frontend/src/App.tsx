@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { CalendarView } from '@/components/Calendar/CalendarView'
 import { VoiceButton } from '@/components/VoiceButton/VoiceButton'
 import { EventList } from '@/components/EventList/EventList'
@@ -30,6 +30,7 @@ export default function App() {
   const [lastVoiceText, setLastVoiceText] = useState<string>()
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
   const [calendarRange, setCalendarRange] = useState<{ start: string; end: string } | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
   const now = useNow()
 
   const removeToast = useCallback((id: number) => {
@@ -62,32 +63,45 @@ export default function App() {
 
   const handleVoiceResult = useCallback(async (text: string) => {
     setLastVoiceText(text)
+    const controller = new AbortController()
+    abortRef.current = controller
+    const timeout = setTimeout(() => controller.abort('timeout'), 15000)
     try {
-      const result = await eventsApi.voice(text, pendingAction ?? undefined)
+      const result = await eventsApi.voice(text, pendingAction ?? undefined, controller.signal)
       const isPending = result.action === 'pending_delete' && !!result.candidates?.length
       if (isPending) {
         setPendingAction({ type: 'delete', candidates: result.candidates! })
         speechHook.setAwaitingConfirm()
         speechHook.speak(result.reply, () => {
-          // TTS 播报完反问后自动开麦等待用户确认
           speechHook.start()
         })
       } else {
         setPendingAction(null)
         speechHook.speak(result.reply)
       }
-      // 估算 TTS 播报时长（中文约 250ms/字，rate=0.95），Toast 在播报结束后再开始倒计时
       const ttsDelay = Math.round(result.reply.length * 250 / 0.95)
       addToast('success', result.reply, ttsDelay)
       await loadEvents()
-    } catch {
-      const errMsg = '抱歉，指令处理失败，请重试。'
-      speechHook.speak(errMsg)
-      const errTtsDelay = Math.round(errMsg.length * 250 / 0.95)
-      addToast('error', errMsg, errTtsDelay)
+    } catch (err) {
+      if (controller.signal.aborted) {
+        const msg = controller.signal.reason === 'timeout' ? '请求超时，请重试。' : '已取消。'
+        addToast('error', msg)
+      } else {
+        const errMsg = '抱歉，指令处理失败，请重试。'
+        speechHook.speak(errMsg)
+        const errTtsDelay = Math.round(errMsg.length * 250 / 0.95)
+        addToast('error', errMsg, errTtsDelay)
+      }
+    } finally {
+      clearTimeout(timeout)
+      abortRef.current = null
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addToast, loadEvents, pendingAction])
+
+  const cancelProcessing = useCallback(() => {
+    abortRef.current?.abort('cancel')
+  }, [])
 
   const speechHook = useSpeech({
     onResult: handleVoiceResult,
@@ -183,6 +197,7 @@ export default function App() {
               state={speechHook.state}
               onStart={speechHook.start}
               onStop={speechHook.stop}
+              onCancel={cancelProcessing}
               lastText={lastVoiceText}
               interimText={speechHook.interimText}
             />
