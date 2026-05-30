@@ -36,11 +36,12 @@ export default function App() {
     setToasts(prev => prev.filter(t => t.id !== id))
   }, [])
 
-  const addToast = useCallback((type: 'success' | 'error', message: string) => {
+  const addToast = useCallback((type: 'success' | 'error', message: string, delay = 0) => {
     const id = Date.now()
     setToasts(prev => [...prev, { id, type, message }])
-    const duration = Math.max(4000, message.length * 80)
-    setTimeout(() => removeToast(id), duration)
+    // delay: TTS 播报期间保持显示，播完后再倒计时
+    const readTime = Math.max(4000, message.length * 80)
+    setTimeout(() => removeToast(id), delay + readTime)
   }, [removeToast])
 
   const loadEvents = useCallback(async (start?: string, end?: string) => {
@@ -75,12 +76,15 @@ export default function App() {
         setPendingAction(null)
         speechHook.speak(result.reply)
       }
-      addToast(isPending ? 'success' : 'success', result.reply)
+      // 估算 TTS 播报时长（中文约 250ms/字，rate=0.95），Toast 在播报结束后再开始倒计时
+      const ttsDelay = Math.round(result.reply.length * 250 / 0.95)
+      addToast('success', result.reply, ttsDelay)
       await loadEvents()
     } catch {
       const errMsg = '抱歉，指令处理失败，请重试。'
       speechHook.speak(errMsg)
-      addToast('error', errMsg)
+      const errTtsDelay = Math.round(errMsg.length * 250 / 0.95)
+      addToast('error', errMsg, errTtsDelay)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addToast, loadEvents, pendingAction])
